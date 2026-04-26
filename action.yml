@@ -22,12 +22,16 @@ inputs:
 outputs:
   valid:
     description: 'Boolean indicating whether the manifest passed validation'
+    value: ${{ steps.validate.outputs.valid }}
   findings-count:
     description: 'Total number of findings (errors + warnings)'
+    value: ${{ steps.validate.outputs.findings-count }}
   error-count:
     description: 'Number of errors found'
+    value: ${{ steps.validate.outputs.error-count }}
   warning-count:
     description: 'Number of warnings found'
+    value: ${{ steps.validate.outputs.warning-count }}
 
 runs:
   using: 'composite'

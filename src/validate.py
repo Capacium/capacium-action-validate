@@ -155,6 +155,16 @@ def generate_exchange_metadata(manifest: dict, findings: dict) -> dict:
     return metadata
 
 
+def set_output(name: str, value: str):
+    """Set a GitHub Actions output via GITHUB_OUTPUT (env file) or fallback."""
+    output_path = os.environ.get("GITHUB_OUTPUT")
+    if output_path:
+        with open(output_path, "a") as f:
+            print(f"{name}={value}", file=f)
+    else:
+        print(f"::set-output name={name}::{value}")
+
+
 def main():
     manifest_path = os.environ.get("MANIFEST_PATH", "capability.yaml")
     strict_mode = os.environ.get("STRICT_MODE", "false").lower() == "true"
@@ -169,10 +179,10 @@ def main():
             "findings": {"errors": [f"Manifest not found at {full_path}"], "warnings": []},
         }
         print(json.dumps(result, indent=2))
-        print("::set-output name=valid::false")
-        print("::set-output name=findings-count::1")
-        print("::set-output name=error-count::1")
-        print("::set-output name=warning-count::0")
+        set_output("valid", "false")
+        set_output("findings-count", "1")
+        set_output("error-count", "1")
+        set_output("warning-count", "0")
         sys.exit(1)
 
     manifest = load_manifest(str(full_path))
@@ -203,10 +213,10 @@ def main():
     }
     print(json.dumps(result, indent=2))
 
-    print(f"::set-output name=valid::{str(is_valid).lower()}")
-    print(f"::set-output name=findings-count::{len(all_errors) + len(all_warnings)}")
-    print(f"::set-output name=error-count::{len(all_errors)}")
-    print(f"::set-output name=warning-count::{len(all_warnings)}")
+    set_output("valid", str(is_valid).lower())
+    set_output("findings-count", str(len(all_errors) + len(all_warnings)))
+    set_output("error-count", str(len(all_errors)))
+    set_output("warning-count", str(len(all_warnings)))
 
     if exchange_output:
         fingerprint = compute_fingerprint(full_path)
