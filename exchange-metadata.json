@@ -1,14 +1,14 @@
 {
   "kind": "skill",
-  "name": "test-skill-meta",
-  "version": "2.0.0",
-  "description": "Metadata test",
-  "author": "Capacium",
+  "name": "test-skill",
+  "version": "1.0.0",
+  "description": "A test skill",
+  "author": "Test Author",
   "tags": [],
-  "fingerprint": "576692f43566f8ef9dc7894a001063b93c544fa1c99e742400fa75b7929cd2fe",
+  "fingerprint": "3f4fb9a840f01904bda8b97b48bffc5603733ca066a1fe9b6d1040eb23491cde",
   "validation_status": "pass",
   "error_count": 0,
   "warning_count": 0,
   "lint_errors": 0,
-  "lint_warnings": 2
+  "lint_warnings": 0
 }

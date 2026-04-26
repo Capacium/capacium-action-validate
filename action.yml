@@ -45,9 +45,9 @@ runs:
         STRICT_MODE: ${{ inputs.strict-mode }}
         EXCHANGE_METADATA_OUTPUT: ${{ inputs.exchange-metadata-output }}
 
-    - name: Upload Exchange Metadata
-      if: inputs.exchange-metadata-output == 'true'
-      uses: actions/upload-artifact@v4
-      with:
-        name: exchange-metadata
-        path: ${{ github.action_path }}/exchange-metadata.json
+      - name: Upload Exchange Metadata
+        if: inputs.exchange-metadata-output == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: exchange-metadata
+          path: exchange-metadata.json

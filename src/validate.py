@@ -187,6 +187,7 @@ def main():
         for w in findings_warnings + lint_warnings:
             findings_errors.append(f"[strict] {w}")
         findings_warnings = []
+        lint_warnings = []
 
     all_errors = findings_errors + lint_errors
     all_warnings = findings_warnings + lint_warnings
@@ -213,10 +214,10 @@ def main():
         metadata["fingerprint"] = fingerprint
         metadata["lint_errors"] = len(lint_findings.get("errors", []))
         metadata["lint_warnings"] = len(lint_findings.get("warnings", []))
-        metadata_path = action_dir / "exchange-metadata.json"
+        metadata_path = Path("exchange-metadata.json")
         with open(metadata_path, "w") as f:
             json.dump(metadata, f, indent=2)
-        print(f"Exchange metadata written to {metadata_path}")
+        print(f"Exchange metadata written to {metadata_path.resolve()}")
 
     if not is_valid:
         sys.exit(1)
