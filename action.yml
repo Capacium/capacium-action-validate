@@ -1,0 +1,53 @@
+name: 'Capacium Validate'
+description: 'Validate capability.yaml manifest files for the Capacium ecosystem'
+author: 'Capacium'
+branding:
+  icon: 'check-circle'
+  color: 'green'
+
+inputs:
+  manifest-path:
+    description: 'Path to the capability.yaml file to validate'
+    required: false
+    default: 'capability.yaml'
+  strict-mode:
+    description: 'Fail on warnings in addition to errors'
+    required: false
+    default: 'false'
+  exchange-metadata-output:
+    description: 'Generate normalized Exchange metadata artifact'
+    required: false
+    default: 'false'
+
+outputs:
+  valid:
+    description: 'Boolean indicating whether the manifest passed validation'
+  findings-count:
+    description: 'Total number of findings (errors + warnings)'
+  error-count:
+    description: 'Number of errors found'
+  warning-count:
+    description: 'Number of warnings found'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Install dependencies
+      run: pip install pyyaml 2>/dev/null || true
+      shell: bash
+
+    - name: Validate capability.yaml
+      id: validate
+      run: python3 ${{ github.action_path }}/src/validate.py
+      shell: bash
+      env:
+        MANIFEST_PATH: ${{ inputs.manifest-path }}
+        STRICT_MODE: ${{ inputs.strict-mode }}
+        EXCHANGE_METADATA_OUTPUT: ${{ inputs.exchange-metadata-output }}
+
+    - name: Upload Exchange Metadata
+      if: inputs.exchange-metadata-output == 'true'
+      uses: actions/upload-artifact@v4
+      with:
+        name: exchange-metadata
+        path: ${{ github.action_path }}/exchange-metadata.json
