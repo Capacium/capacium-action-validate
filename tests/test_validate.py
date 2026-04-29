@@ -85,14 +85,54 @@ version: 1.0.0
 
 
 def test_strict_mode_dot_file():
+    """Dot-files are doc-level warnings — only promoted with strict-level=docs."""
     manifest = """kind: skill
 name: dot-file-test
 version: 1.0.0
 description: A skill with dot file
 author: Test
 """
+    # strict-mode=true + strict-level=schema (default): dot-file stays as warning
     result = run_validate(manifest, strict=True, dot_file=True)
-    assert result["returncode"] == 1, "Strict mode should fail on dot-file warning"
+    assert result["returncode"] == 0, (
+        f"Doc warnings (dot-files) should NOT block in default strict mode. "
+        f"Got returncode {result['returncode']}: {result['stdout']}"
+    )
+
+
+def test_strict_level_docs_dot_file():
+    """Dot-files are promoted with strict-level=docs."""
+    manifest = """kind: skill
+name: dot-file-test
+version: 1.0.0
+description: A skill with dot file
+author: Test
+"""
+    tmpdir = tempfile.mkdtemp()
+    manifest_path = os.path.join(tmpdir, "capability.yaml")
+    with open(manifest_path, "w") as f:
+        f.write(manifest)
+    open(os.path.join(tmpdir, ".DS_Store"), "w").close()
+
+    try:
+        env = os.environ.copy()
+        env["MANIFEST_PATH"] = manifest_path
+        env["STRICT_MODE"] = "true"
+        env["STRICT_LEVEL"] = "docs"
+
+        result = subprocess.run(
+            [sys.executable, os.path.join(SCRIPT_DIR, "validate.py")],
+            env=env,
+            capture_output=True,
+            text=True,
+        )
+        assert result.returncode == 1, (
+            f"strict-level=docs should fail on dot-file. "
+            f"Got returncode {result.returncode}: {result.stdout}"
+        )
+    finally:
+        import shutil
+        shutil.rmtree(tmpdir)
 
 
 def test_no_dot_file_passes():

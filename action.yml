@@ -11,9 +11,13 @@ inputs:
     required: false
     default: 'capability.yaml'
   strict-mode:
-    description: 'Fail on warnings in addition to errors'
+    description: 'Promote schema-level warnings to errors (deps, runtimes, frameworks). Doc warnings (prompt.md, README) are always recommendations.'
     required: false
     default: 'false'
+  strict-level:
+    description: 'Docs strictness: "schema" (default) or "docs" (also fail on missing prompt.md/README)'
+    required: false
+    default: 'schema'
   exchange-metadata-output:
     description: 'Generate normalized Exchange metadata artifact'
     required: false
@@ -47,6 +51,7 @@ runs:
       env:
         MANIFEST_PATH: ${{ inputs.manifest-path }}
         STRICT_MODE: ${{ inputs.strict-mode }}
+        STRICT_LEVEL: ${{ inputs.strict-level }}
         EXCHANGE_METADATA_OUTPUT: ${{ inputs.exchange-metadata-output }}
 
     - name: Upload Exchange Metadata

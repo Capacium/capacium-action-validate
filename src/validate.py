@@ -1,4 +1,13 @@
-"""capability.yaml manifest validator for Capacium Validate Action."""
+"""capability.yaml manifest validator for Capacium Validate Action.
+
+Strict mode levels:
+  strict-mode: "false"  → No warnings promoted (default)
+  strict-mode: "true"   → Only schema-level warnings promoted (kind, deps, runtimes, frameworks)
+  strict-level: "docs"  → Additionally promote doc-file warnings (prompt.md, README)
+  
+Doc-convention checks (prompt.md, README) are NEVER errors in default strict mode.
+They are only promoted when STRICT_LEVEL=docs is explicitly set.
+"""
 
 import hashlib
 import json
@@ -28,13 +37,23 @@ VALID_KINDS = {
     "template", "workflow", "mcp-server", "connector-pack",
 }
 
+# Warnings in this set are schema-level: promoted to errors in strict-mode=true
+_SCHEMA_WARNING_KEYS = {
+    "dependencies", "runtimes", "frameworks",
+}
+
+# Warnings in this set are doc-level: only promoted in strict-level=docs
+_DOCS_WARNING_KEYS = {
+    "prompt.md", "readme", "dot-files",
+}
+
 
 def load_manifest(path: str) -> dict:
     with open(path, "r") as f:
         return yaml.safe_load(f)
 
 
-def validate_manifest(manifest: dict, strict: bool = False) -> dict:
+def validate_manifest(manifest: dict) -> dict:
     findings = {"errors": [], "warnings": []}
 
     if not isinstance(manifest, dict):
@@ -89,10 +108,6 @@ def validate_manifest(manifest: dict, strict: bool = False) -> dict:
         if not isinstance(frameworks, list):
             findings["warnings"].append("'frameworks' should be a list")
 
-    if strict and findings["warnings"]:
-        for w in findings["warnings"]:
-            findings["errors"].append(f"[strict] {w}")
-
     return findings
 
 
@@ -100,13 +115,10 @@ def lint_package(manifest_path: Path) -> dict:
     findings = {"errors": [], "warnings": []}
     pkg_dir = manifest_path.parent
 
-    expected_files = ["capability.yaml", "prompt.md"]
-    for fname in expected_files:
-        fpath = pkg_dir / fname
-        if not fpath.exists() and fname != "prompt.md":
-            findings["errors"].append(f"Expected file not found: {fname}")
-        elif not fpath.exists():
-            findings["warnings"].append(f"Recommended file not found: {fname}")
+    # prompt.md: NEVER a hard error — always a recommendation
+    prompt_path = pkg_dir / "prompt.md"
+    if not prompt_path.exists():
+        findings["warnings"].append("Recommended file not found: prompt.md")
 
     readme_files = list(pkg_dir.glob("README*"))
     if not readme_files:
@@ -123,6 +135,39 @@ def lint_package(manifest_path: Path) -> dict:
         findings["errors"].append("No capability manifest file found (*.yaml or *.yml)")
 
     return findings
+
+
+def _warning_is_schema(msg: str) -> bool:
+    """Heuristic: classify a warning string as schema-level or doc-level."""
+    schema_triggers = ("dependency", "dependencies", "runtime", "runtimes", "framework")
+    return any(msg.lower().startswith(t) or "'" + t in msg.lower() for t in schema_triggers)
+
+
+def _promote_warnings(
+    manifest_warnings: list,
+    lint_warnings: list,
+    strict_mode: bool,
+    strict_level: str,
+) -> tuple:
+    """Determine which warnings to promote to errors based on strict config."""
+    errors_from_warnings = []
+
+    if strict_mode:
+        # Schema-level warnings → errors
+        for w in manifest_warnings:
+            errors_from_warnings.append(f"[strict] {w}")
+        manifest_warnings_kept = []
+    else:
+        manifest_warnings_kept = manifest_warnings
+
+    if strict_level == "docs":
+        for w in lint_warnings:
+            errors_from_warnings.append(f"[strict] {w}")
+        lint_warnings_kept = []
+    else:
+        lint_warnings_kept = lint_warnings
+
+    return manifest_warnings_kept, lint_warnings_kept, errors_from_warnings
 
 
 def resolve_manifest_path(input_path: str, action_dir: Path) -> Path:
@@ -156,7 +201,6 @@ def generate_exchange_metadata(manifest: dict, findings: dict) -> dict:
 
 
 def set_output(name: str, value: str):
-    """Set a GitHub Actions output via GITHUB_OUTPUT (env file) or fallback."""
     output_path = os.environ.get("GITHUB_OUTPUT")
     if output_path:
         with open(output_path, "a") as f:
@@ -168,6 +212,7 @@ def set_output(name: str, value: str):
 def main():
     manifest_path = os.environ.get("MANIFEST_PATH", "capability.yaml")
     strict_mode = os.environ.get("STRICT_MODE", "false").lower() == "true"
+    strict_level = os.environ.get("STRICT_LEVEL", "schema").lower()
     exchange_output = os.environ.get("EXCHANGE_METADATA_OUTPUT", "false").lower() == "true"
 
     action_dir = Path(__file__).resolve().parent.parent
@@ -193,14 +238,20 @@ def main():
     lint_errors = lint_findings.get("errors", [])
     lint_warnings = lint_findings.get("warnings", [])
 
-    if strict_mode:
-        for w in findings_warnings + lint_warnings:
-            findings_errors.append(f"[strict] {w}")
-        findings_warnings = []
-        lint_warnings = []
+    # Promote warnings based on strict configuration:
+    #   strict-mode=true + strict-level=schema (default):
+    #     Only schema warnings (deps, runtimes, frameworks) → errors
+    #     Doc warnings (prompt.md, README) stay as warnings
+    #   strict-mode=true + strict-level=docs:
+    #     Schema warnings + doc warnings → errors
+    #   strict-mode=false:
+    #     All warnings stay as warnings
+    mw_kept, lw_kept, promoted = _promote_warnings(
+        findings_warnings, lint_warnings, strict_mode, strict_level,
+    )
 
-    all_errors = findings_errors + lint_errors
-    all_warnings = findings_warnings + lint_warnings
+    all_errors = findings_errors + lint_errors + promoted
+    all_warnings = mw_kept + lw_kept
     is_valid = len(all_errors) == 0
 
     result = {
