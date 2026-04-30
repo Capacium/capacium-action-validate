@@ -134,6 +134,28 @@ def lint_package(manifest_path: Path) -> dict:
     if not manifests:
         findings["errors"].append("No capability manifest file found (*.yaml or *.yml)")
 
+    # Framework compatibility hints
+    manifest = load_manifest(str(manifest_path)) if manifest_path.exists() else {}
+    frameworks = manifest.get("frameworks", [])
+    if isinstance(frameworks, list):
+        has_cmd = "opencode-command" in frameworks or "claude-code-command" in frameworks
+        has_skill = any(f in frameworks for f in ("opencode", "claude-code", "gemini-cli", "cursor"))
+        skill_md = (pkg_dir / "SKILL.md")
+        if has_cmd and skill_md.exists() and any(f.endswith(".md") for f in os.listdir(pkg_dir) if f == "SKILL.md"):
+            findings["warnings"].append(
+                "Framework conflict: 'opencode-command' or 'claude-code-command' declared but only SKILL.md found. "
+                "Command adapters create command symlinks that can't parse SKILL.md YAML frontmatter. "
+                "Provide a separate .md file for commands or remove command frameworks."
+            )
+        # Cursor: .mdc is legacy, should use .cursor/skills/
+        if "cursor" in frameworks:
+            mdc_files = list(pkg_dir.glob("*.mdc"))
+            if mdc_files:
+                findings["warnings"].append(
+                    "Cursor legacy format: .mdc files found. Cursor now expects SKILL.md in .cursor/skills/. "
+                    "Convert .mdc files to SKILL.md format."
+                )
+
     return findings
 
 
