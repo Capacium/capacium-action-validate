@@ -4,6 +4,7 @@ import os
 import subprocess
 import sys
 import tempfile
+from pathlib import Path
 
 SCRIPT_DIR = os.path.join(os.path.dirname(__file__), "..", "src")
 
@@ -184,6 +185,66 @@ author: Capacium
         shutil.rmtree(tmpdir)
 
 
+def test_framework_command_conflict():
+    """Warn when command frameworks declared but only SKILL.md exists."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        manifest = tmpdir + "/capability.yaml"
+        import yaml
+        with open(manifest, "w") as f:
+            yaml.dump({
+                "name": "test-skill",
+                "version": "1.0.0",
+                "kind": "skill",
+                "frameworks": ["opencode", "opencode-command"],
+            }, f)
+        Path(tmpdir + "/SKILL.md").write_text("# Test Skill\n\nSkill content.")
+        env = {
+            **os.environ,
+            "MANIFEST_PATH": manifest,
+            "STRICT_MODE": "false",
+            "GITHUB_OUTPUT": os.devnull,
+        }
+        result = subprocess.run(
+            [sys.executable, os.path.join(SCRIPT_DIR, "validate.py")],
+            capture_output=True, text=True, env=env, cwd=tmpdir,
+        )
+        stdout = result.stdout.split("::set-output")[0].strip()
+        output = json.loads(stdout)
+        warnings = output["findings"]["warnings"]
+        assert any("opencode-command" in w and "SKILL.md" in w for w in warnings), \
+            f"Expected command/SKILL.md conflict warning, got: {warnings}"
+
+
+def test_cursor_mdc_legacy_warning():
+    """Warn when cursor framework declared with .mdc files."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        manifest = tmpdir + "/capability.yaml"
+        import yaml
+        with open(manifest, "w") as f:
+            yaml.dump({
+                "name": "test-skill",
+                "version": "1.0.0",
+                "kind": "skill",
+                "frameworks": ["cursor"],
+            }, f)
+        Path(tmpdir + "/rules.mdc").write_text("# Old Cursor rules")
+        env = {
+            **os.environ,
+            "MANIFEST_PATH": manifest,
+            "STRICT_MODE": "false",
+            "GITHUB_OUTPUT": os.devnull,
+        }
+        result = subprocess.run(
+            [sys.executable, os.path.join(SCRIPT_DIR, "validate.py")],
+            capture_output=True, text=True, env=env, cwd=tmpdir,
+        )
+        stdout = result.stdout.split("::set-output")[0].strip()
+        output = json.loads(stdout)
+        warnings = output["findings"]["warnings"]
+        assert any(".mdc" in w and "cursor" in w.lower() for w in warnings), \
+            f"Expected cursor/.mdc legacy warning, got: {warnings}"
+
+
 if __name__ == "__main__":
     test_valid_manifest()
     test_invalid_kind()
@@ -193,4 +254,6 @@ if __name__ == "__main__":
     test_strict_mode_dot_file()
     test_no_dot_file_passes()
     test_exchange_metadata_output()
+    test_framework_command_conflict()
+    test_cursor_mdc_legacy_warning()
     print("All validate tests passed!")
