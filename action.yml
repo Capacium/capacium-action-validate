@@ -22,6 +22,10 @@ inputs:
     description: 'Generate normalized Exchange metadata artifact'
     required: false
     default: 'false'
+  sync-version:
+    description: 'Sync capability.yaml version with release tag (commits back to repo)'
+    required: false
+    default: 'false'
 
 outputs:
   valid:
@@ -53,6 +57,14 @@ runs:
         STRICT_MODE: ${{ inputs.strict-mode }}
         STRICT_LEVEL: ${{ inputs.strict-level }}
         EXCHANGE_METADATA_OUTPUT: ${{ inputs.exchange-metadata-output }}
+
+    - name: Sync version from release tag
+      if: inputs.sync-version == 'true' && github.event_name == 'release'
+      run: python3 ${{ github.action_path }}/src/sync_version.py
+      shell: bash
+      env:
+        MANIFEST_PATH: ${{ inputs.manifest-path }}
+        RELEASE_TAG: ${{ github.ref_name }}
 
     - name: Upload Exchange Metadata
       if: inputs.exchange-metadata-output == 'true'

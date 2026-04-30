@@ -30,6 +30,7 @@ jobs:
 | `manifest-path` | No | `capability.yaml` | Path to the manifest file to validate |
 | `strict-mode` | No | `false` | Fail on warnings in addition to errors |
 | `exchange-metadata-output` | No | `false` | Generate normalized Exchange metadata artifact |
+| `sync-version` | No | `false` | Sync `version` field with release tag (commits back) |
 
 ## Outputs
 
@@ -39,6 +40,28 @@ jobs:
 | `findings-count` | Total number of findings (errors + warnings) |
 | `error-count` | Number of errors found |
 | `warning-count` | Number of warnings found |
+
+## Release Workflow (with version sync)
+
+When triggered by a `release.published` event, `sync-version: true` automatically patches
+the `version` field in `capability.yaml` to match the release tag and commits the change.
+
+```yaml
+name: Release
+on:
+  release:
+    types: [published]
+
+jobs:
+  validate-and-sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: Capacium/capacium-action-validate@v1
+        with:
+          sync-version: 'true'
+          strict-mode: 'true'
+```
 
 ## Full Example
 
