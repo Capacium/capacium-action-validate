@@ -1,5 +1,9 @@
 # Capacium Validate Action
 
+> [!NOTE]
+> **Public mirror.** The canonical repository is hosted on our self-hosted git.
+> This GitHub copy is a read-only mirror kept in sync for visibility and installation.
+
 [![GitHub Marketplace](https://img.shields.io/badge/Marketplace-Capacium_Validate-blue?logo=github)](https://github.com/marketplace/actions/capacium-validate)
 ![GitHub Actions](https://img.shields.io/badge/actions-composite-brightgreen)
 ![License](https://img.shields.io/badge/license-Apache--2.0-blue)
