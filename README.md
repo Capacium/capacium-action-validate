@@ -117,3 +117,9 @@ EXCHANGE_METADATA_OUTPUT=true python src/validate.py
 ## License
 
 Apache-2.0
+
+## Development
+
+Canonical repository: **self-hosted Forgejo** — `git.langevc.com/capacium/capacium-action-validate`
+(`git clone git@git.langevc.com:capacium/capacium-action-validate.git`). Develop against the Forgejo
+clone and open pull requests there. The GitHub copy is a read-only mirror.
