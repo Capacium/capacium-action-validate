@@ -14,6 +14,7 @@ jobs:
         env:
           GH_MIRROR_TOKEN: ${{ secrets.GH_MIRROR_TOKEN }}
         run: |
+          set -euo pipefail
           remote="https://x-access-token:${GH_MIRROR_TOKEN}@github.com/Capacium/capacium-action-validate.git"
           # Mirror exactly the ref that triggered this run (branch or tag). No --prune
           # and no 'refs/heads/*' wildcard: the CI checkout only has this one ref
